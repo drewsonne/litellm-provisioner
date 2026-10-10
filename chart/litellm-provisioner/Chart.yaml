@@ -1,0 +1,6 @@
+apiVersion: v2
+name: litellm-provisioner
+description: Provision LiteLLM virtual keys via CRDs
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

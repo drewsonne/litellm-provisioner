@@ -1,0 +1,11 @@
+image:
+  repository: drewsonne/litellm-provisioner
+  tag: latest
+
+litellm:
+  # In-cluster LiteLLM proxy URL.
+  url: http://litellm.litellm.svc.cluster.local:4000
+  # Secret in the release namespace holding the master key.
+  masterKeySecret:
+    name: litellm-master-key
+    key: password
