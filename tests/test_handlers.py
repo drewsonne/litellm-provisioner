@@ -117,4 +117,4 @@ def test_delete_waits_when_litellm_is_down(monkeypatch: pytest.MonkeyPatch) -> N
 
     monkeypatch.setattr(keys, "revoke", down)
     with pytest.raises(kopf.TemporaryError):
-        HANDLERS.delete_fn(spec=SPEC, name="n", namespace="ns", logger=LOGGER)
+        HANDLERS.delete_fn(spec=SPEC, body={}, name="n", namespace="ns", logger=LOGGER)

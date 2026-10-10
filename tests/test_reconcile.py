@@ -65,7 +65,7 @@ class FakeClient:
 def secrets(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     store: dict[str, str] = {}
     monkeypatch.setattr(
-        keys.kube_secrets, "read_api_key", lambda ns, n: store.get(f"{ns}/{n}")
+        keys.kube_secrets, "read_api_key", lambda ns, n, _body: store.get(f"{ns}/{n}")
     )
     monkeypatch.setattr(
         keys.kube_secrets,
@@ -75,7 +75,7 @@ def secrets(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     monkeypatch.setattr(
         keys.kube_secrets,
         "delete_secret",
-        lambda ns, n, _logger: store.pop(f"{ns}/{n}", None),
+        lambda ns, n, _body, _logger: store.pop(f"{ns}/{n}", None),
     )
     return store
 
@@ -171,6 +171,7 @@ def test_revoke_deletes_our_key_and_secret(secrets: dict[str, str]) -> None:
         "litellm-key",
         "claude-memory",
         "claude-memory",
+        {},
         cast("LiteLLMClient", client),
         LOGGER,
     )
@@ -186,6 +187,7 @@ def test_revoke_leaves_foreign_key_alone() -> None:
         "litellm-key",
         "claude-memory",
         "claude-memory",
+        {},
         cast("LiteLLMClient", client),
         LOGGER,
     )

@@ -50,7 +50,7 @@ def reconcile(
         msg = f"alias {alias!r} belongs to {existing.owner}"
         raise kopf.PermanentError(msg)
 
-    stored = kube_secrets.read_api_key(namespace, secret_name)
+    stored = kube_secrets.read_api_key(namespace, secret_name, body)
     if existing is not None and (stored is None or token_for(stored) != existing.token):
         logger.warning("Secret for %r is missing or stale; replacing the key", alias)
         client.delete(existing.token)
@@ -72,6 +72,7 @@ def revoke(
     secret_name: str,
     namespace: str,
     name: str,
+    body: Any,
     client: LiteLLMClient,
     logger: Any,
 ) -> None:
@@ -84,7 +85,7 @@ def revoke(
         logger.info("Revoked LiteLLM key %r", alias)
     else:
         logger.warning("Key %r is not ours; leaving it in LiteLLM", alias)
-    kube_secrets.delete_secret(namespace, secret_name, logger)
+    kube_secrets.delete_secret(namespace, secret_name, body, logger)
 
 
 GROUP, VERSION, PLURAL = "litellm.drewsonne.github.io", "v1", "litellmkeys"
@@ -167,6 +168,7 @@ def update_fn(
                 old["secretName"],
                 namespace,
                 name,
+                body,
                 client_from_env(),
                 logger,
             )
@@ -177,7 +179,7 @@ def update_fn(
 
 @kopf.on.delete(GROUP, VERSION, PLURAL, retries=10, backoff=30, timeout=600)
 def delete_fn(
-    spec: Any, name: str, namespace: str | None, logger: Any, **_: Any
+    spec: Any, body: Any, name: str, namespace: str | None, logger: Any, **_: Any
 ) -> None:
     """Revoke the key, then delete the Secret."""
     if namespace is None:
@@ -188,6 +190,7 @@ def delete_fn(
             spec["secretName"],
             namespace,
             name,
+            body,
             client_from_env(),
             logger,
         )
