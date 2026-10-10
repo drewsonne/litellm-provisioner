@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>litellm-provisioner</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #24292f;
+         line-height: 1.6; }
+  pre { background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+  code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.9em; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { border: 1px solid #d0d7de; padding: 0.5rem 0.75rem; text-align: left; }
+  th { background: #f6f8fa; }
+  a { color: #0969da; }
+  hr { border: none; border-top: 1px solid #d0d7de; margin: 1.5rem 0; }
+  h1 { border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
+  h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
+</style>
+</head>
+<body>
+<h1>litellm-provisioner</h1>
+<p>Kubernetes operator that creates LiteLLM virtual keys from <code>LiteLLMKey</code></p>
+<p>resources and writes each key into a Secret in the declaring namespace. Only</p>
+<p>LiteLLM itself needs the master key; each service declares the key it needs in</p>
+<p>its own chart. Removing the resource revokes the key and deletes the Secret.</p>
+<pre><code class="language-yaml">
+apiVersion: litellm.drewsonne.github.io/v1
+kind: LiteLLMKey
+metadata:
+  name: claude-memory
+  namespace: claude-memory
+spec:
+  alias: claude-memory          # key_alias in LiteLLM; must be unique
+  models: [claude-haiku-4-5, claude-opus-4-6]
+  maxBudget: 25                 # US dollars
+  budgetDuration: 7d
+  secretName: litellm-key       # Secret in this namespace, field api_key
+</code></pre>
+<h2>Install</h2>
+<pre><code class="language-bash">
+helm repo add litellm-provisioner https://drewsonne.github.io/litellm-provisioner
+helm install litellm-provisioner litellm-provisioner/litellm-provisioner -n litellm
+</code></pre>
+<p>The master key is read from Secret <code>litellm-master-key</code> (field <code>password</code>) in</p>
+<p>the release namespace.</p>
+<h2>Safety</h2>
+<p>Every key it creates carries LiteLLM metadata <code>managed_by: litellm-provisioner</code></p>
+<p>and <code>owner: &lt;namespace&gt;/&lt;name&gt;</code>. It never updates or revokes a key without</p>
+<p>both matching, so keys created by hand are never touched.</p>
+<hr>
+
+<h2>Helm Chart Releases</h2>
+<table>
+  <thead><tr><th>Version</th><th>App Version</th><th>Created</th><th>Download</th></tr></thead>
+  <tbody>
+  <tr><td>0.0.1</td><td>0.0.1</td><td>2026-10-10T18:55:20</td><td><a href="litellm-provisioner-0.0.1.tgz">litellm-provisioner-0.0.1.tgz</a></td></tr>
+  </tbody>
+</table>
+<hr>
+<p><a href="index.yaml">Helm Repository Index (index.yaml)</a></p>
+</body>
+</html>
