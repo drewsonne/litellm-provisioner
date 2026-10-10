@@ -98,7 +98,8 @@ class LiteLLMClient:
             "/key/list",
             params={"key_alias": alias, "return_full_object": "true"},
         )
-        keys = body.get("keys") or []
+        # LiteLLM's key_alias filter is a partial, case-insensitive match.
+        keys = [k for k in body.get("keys") or [] if k.get("key_alias") == alias]
         if not keys:
             return None
         if len(keys) > 1:

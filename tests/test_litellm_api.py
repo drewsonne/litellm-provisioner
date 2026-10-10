@@ -32,6 +32,7 @@ def client() -> LiteLLMClient:
 def key_row(**overrides: object) -> dict[str, object]:
     row: dict[str, object] = {
         "token": "abc123",
+        "key_alias": "a",
         "models": ["claude-haiku-4-5"],
         "max_budget": 25.0,
         "budget_duration": "7d",
@@ -84,6 +85,29 @@ def test_find_key_refuses_duplicate_aliases(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(json={"keys": [key_row(), other]})
     with pytest.raises(LiteLLMError, match="2 keys"):
         client().find_key("a")
+
+
+def test_find_key_ignores_partial_alias_matches(httpx_mock: HTTPXMock) -> None:
+    rows = [
+        key_row(key_alias="openclaw", token="exact"),  # noqa: S106
+        key_row(key_alias="openclaw-old", token="old"),  # noqa: S106
+    ]
+    httpx_mock.add_response(json={"keys": rows})
+    found = client().find_key("openclaw")
+    assert found is not None
+    assert found.token == "exact"  # noqa: S105
+
+
+def test_find_key_returns_none_when_only_partial_matches(
+    httpx_mock: HTTPXMock,
+) -> None:
+    httpx_mock.add_response(json={"keys": [key_row(key_alias="claude-memory")]})
+    assert client().find_key("claude") is None
+
+
+def test_find_key_alias_match_is_case_sensitive(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(json={"keys": [key_row(key_alias="OpenClaw")]})
+    assert client().find_key("openclaw") is None
 
 
 def test_generate_sends_marker_and_returns_key_and_token(
