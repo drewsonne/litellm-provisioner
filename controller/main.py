@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import keys  # noqa: F401 - registers LiteLLMKey handlers
 import kopf
 
 

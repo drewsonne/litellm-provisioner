@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import kopf
 import kube_secrets
-from litellm_api import KeySettings
+from litellm_api import KeySettings, LiteLLMError, client_from_env
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -85,3 +85,125 @@ def revoke(
     else:
         logger.warning("Key %r is not ours; leaving it in LiteLLM", alias)
     kube_secrets.delete_secret(namespace, secret_name, logger)
+
+
+GROUP, VERSION, PLURAL = "litellm.drewsonne.github.io", "v1", "litellmkeys"
+
+
+def _sync(
+    spec: Any,
+    body: Any,
+    name: str,
+    namespace: str | None,
+    logger: Any,
+    patch: Any,
+) -> None:
+    """Run reconcile() and record the outcome in status."""
+    if namespace is None:
+        msg = "LiteLLMKey must be namespaced"
+        raise kopf.PermanentError(msg)
+    try:
+        reconcile(spec, namespace, name, body, client_from_env(), logger)
+    except LiteLLMError as exc:
+        patch.status["ready"] = False
+        patch.status["message"] = str(exc)
+        raise kopf.TemporaryError(str(exc), delay=30) from None
+    except kopf.PermanentError as exc:
+        patch.status["ready"] = False
+        patch.status["message"] = str(exc)
+        raise
+    patch.status["ready"] = True
+    patch.status["message"] = ""
+
+
+@kopf.on.create(GROUP, VERSION, PLURAL, retries=5, backoff=30, timeout=300)
+def create_fn(
+    spec: Any,
+    body: Any,
+    name: str,
+    namespace: str | None,
+    logger: Any,
+    patch: Any,
+    **_: Any,
+) -> None:
+    """Create the key and Secret for a new LiteLLMKey."""
+    _sync(spec, body, name, namespace, logger, patch)
+
+
+@kopf.on.resume(GROUP, VERSION, PLURAL)
+def resume_fn(
+    spec: Any,
+    body: Any,
+    name: str,
+    namespace: str | None,
+    logger: Any,
+    patch: Any,
+    **_: Any,
+) -> None:
+    """Re-check existing LiteLLMKeys when the operator starts."""
+    _sync(spec, body, name, namespace, logger, patch)
+
+
+@kopf.on.update(GROUP, VERSION, PLURAL, field="spec", retries=3, backoff=15)
+def update_fn(
+    spec: Any,
+    old: Any,
+    body: Any,
+    name: str,
+    namespace: str | None,
+    logger: Any,
+    patch: Any,
+    **_: Any,
+) -> None:
+    """Apply a spec change, revoking the old key if its identity moved."""
+    if (
+        namespace is not None
+        and old
+        and (old["alias"] != spec["alias"] or old["secretName"] != spec["secretName"])
+    ):
+        try:
+            revoke(
+                old["alias"],
+                old["secretName"],
+                namespace,
+                name,
+                client_from_env(),
+                logger,
+            )
+        except LiteLLMError as exc:
+            raise kopf.TemporaryError(str(exc), delay=30) from None
+    _sync(spec, body, name, namespace, logger, patch)
+
+
+@kopf.on.delete(GROUP, VERSION, PLURAL, retries=10, backoff=30, timeout=600)
+def delete_fn(
+    spec: Any, name: str, namespace: str | None, logger: Any, **_: Any
+) -> None:
+    """Revoke the key, then delete the Secret."""
+    if namespace is None:
+        return
+    try:
+        revoke(
+            spec["alias"],
+            spec["secretName"],
+            namespace,
+            name,
+            client_from_env(),
+            logger,
+        )
+    except LiteLLMError as exc:
+        raise kopf.TemporaryError(str(exc), delay=30) from None
+
+
+@kopf.timer(GROUP, VERSION, PLURAL, interval=600, initial_delay=60, idle=30)
+def check_drift(
+    spec: Any,
+    body: Any,
+    name: str,
+    namespace: str | None,
+    logger: Any,
+    patch: Any,
+    **_: Any,
+) -> None:
+    """Every 10 minutes, put back anything changed outside git."""
+    _sync(spec, body, name, namespace, logger, patch)
