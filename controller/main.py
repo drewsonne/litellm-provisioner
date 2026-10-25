@@ -10,6 +10,11 @@ from typing import Any
 
 import keys  # noqa: F401 - registers LiteLLMKey handlers
 import kopf
+from logs import configure_logging
+
+# kopf's CLI has already added its handler to root; replace it so kopf's own
+# lines are JSON too.
+configure_logging()
 
 
 @kopf.on.startup()
