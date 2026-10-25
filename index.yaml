@@ -2,8 +2,18 @@ apiVersion: v1
 entries:
   litellm-provisioner:
   - apiVersion: v2
+    appVersion: 0.0.2
+    created: "2026-10-25T19:13:19.543697367Z"
+    description: Provision LiteLLM virtual keys via CRDs
+    digest: 4179d7e4f6a68d4a33ae82867a2346243a6b9265f352e724dc2675088822f47b
+    name: litellm-provisioner
+    type: application
+    urls:
+    - https://drewsonne.github.io/litellm-provisioner/litellm-provisioner-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v2
     appVersion: 0.0.1
-    created: "2026-10-10T18:55:20.12372916Z"
+    created: "2026-10-25T19:13:19.543527011Z"
     description: Provision LiteLLM virtual keys via CRDs
     digest: 0deb813ea17e43eb87a4b163182a6231f7193d85fe06627ed458af9f21b3ced7
     name: litellm-provisioner
@@ -11,4 +21,4 @@ entries:
     urls:
     - https://drewsonne.github.io/litellm-provisioner/litellm-provisioner-0.0.1.tgz
     version: 0.0.1
-generated: "2026-10-10T18:55:20.123052684Z"
+generated: "2026-10-25T19:13:19.543253249Z"
